@@ -616,58 +616,31 @@ async def job_econ_alerts(bot: Bot):
         delta = (ev["time"] - now).total_seconds()
         if 3300 < delta < 3900:  # ~55-65 min before
             text = (
-                f"⚠️ *تنبيه بيانات اقتصادية مهمة*\n\n"
-                f"🔥 *{ev['name']}* ({ev['currency']})\n"
-                f"⏰ الوقت: *{ev['time'].strftime('%H:%M')} (مغرب)*\n"
-                f"📊 التوقع: `{ev['forecast']}` | السابق: `{ev['previous']}`\n\n"
-                f"💡 _هذه البيانات قد تسبب حركة قوية على XAUUSD_\n"
-                f"⚠️ _احذر من الدخول قبل الإعلان!_"
-            )
-            await broadcast(bot, text, "notify_econ")
-            logger.info(f"Econ alert sent for: {ev['name']}")
-
-# ─── Main ─────────────────────────────────────────────────────────────────────
-async def main():
+               def main():
     db_init()
     logger.info("Database initialized")
 
     app = Application.builder().token(TOKEN).build()
 
-    # Commands
-    app.add_handler(CommandHandler("start",    cmd_start))
-    app.add_handler(CommandHandler("news",     cmd_news))
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("news", cmd_news))
     app.add_handler(CommandHandler("analysis", cmd_analysis))
-    app.add_handler(CommandHandler("ny",       cmd_ny))
+    app.add_handler(CommandHandler("ny", cmd_ny))
     app.add_handler(CommandHandler("calendar", cmd_calendar))
     app.add_handler(CommandHandler("settings", cmd_settings))
-    app.add_handler(CommandHandler("stats",    cmd_stats))
-    app.add_handler(CommandHandler("help",     cmd_help))
+    app.add_handler(CommandHandler("stats", cmd_stats))
+    app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CallbackQueryHandler(on_callback))
 
-    # Set bot commands menu
-    await app.bot.set_my_commands([
-        BotCommand("news",     "آخر أخبار الذهب والدولار"),
-        BotCommand("analysis", "تحليل السوق الشامل"),
-        BotCommand("ny",       "تنبيه جلسة نيويورك"),
-        BotCommand("calendar", "التقويم الاقتصادي"),
-        BotCommand("settings", "إعدادات التنبيهات"),
-        BotCommand("help",     "المساعدة"),
-    ])
-
-    bot = app.bot
     scheduler = AsyncIOScheduler(timezone=MOROCCO_TZ)
-    # Hourly news at :10 past the hour
-    scheduler.add_job(job_hourly,      "cron", minute=10,                 args=[bot])
-    # NY alert 30 min before (NY opens 15:00 Morocco)
-    scheduler.add_job(job_ny_alert,    "cron", hour=14, minute=30,        args=[bot])
-    # Morning summary
-    scheduler.add_job(job_morning,     "cron", hour=7,  minute=0,         args=[bot])
-    # Economic event alerts — check every 10 min
-    scheduler.add_job(job_econ_alerts, "cron", minute="*/10",             args=[bot])
+    scheduler.add_job(job_hourly, "cron", minute=10, args=[app.bot])
+    scheduler.add_job(job_ny_alert, "cron", hour=14, minute=30, args=[app.bot])
+    scheduler.add_job(job_morning, "cron", hour=7, minute=0, args=[app.bot])
+    scheduler.add_job(job_econ_alerts, "cron", minute="*/10", args=[app.bot])
     scheduler.start()
 
     logger.info("✅ Gold Bot v2.0 started — polling...")
-    await app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
